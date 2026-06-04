@@ -1,0 +1,60 @@
+{
+  "name": "Prospect",
+  "type": "object",
+  "properties": {
+    "place_id": {
+      "type": "string",
+      "title": "Place ID",
+      "description": "Google Maps place ID (unique dedup key)"
+    },
+    "name": {
+      "type": "string",
+      "title": "Business Name"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone"
+    },
+    "email": {
+      "type": "string",
+      "title": "Email"
+    },
+    "website": {
+      "type": "string",
+      "title": "Website"
+    },
+    "address": {
+      "type": "string",
+      "title": "Address"
+    },
+    "rating": {
+      "type": "number",
+      "title": "Rating"
+    },
+    "review_count": {
+      "type": "number",
+      "title": "Review Count"
+    },
+    "has_website": {
+      "type": "boolean",
+      "title": "Has Website"
+    },
+    "niche": {
+      "type": "string",
+      "title": "Niche"
+    },
+    "city": {
+      "type": "string",
+      "title": "City"
+    },
+    "scraped_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Scraped At"
+    }
+  },
+  "required": [
+    "place_id",
+    "name"
+  ]
+}

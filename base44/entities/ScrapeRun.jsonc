@@ -1,0 +1,64 @@
+{
+  "name": "ScrapeRun",
+  "type": "object",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "title": "Apify Run ID"
+    },
+    "niche": {
+      "type": "string",
+      "title": "Niche"
+    },
+    "city": {
+      "type": "string",
+      "title": "City"
+    },
+    "max_results": {
+      "type": "number",
+      "title": "Max Results"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "pending",
+        "running",
+        "complete",
+        "failed"
+      ]
+    },
+    "inserted": {
+      "type": "number",
+      "title": "Leads Inserted",
+      "default": 0
+    },
+    "skipped": {
+      "type": "number",
+      "title": "Leads Skipped",
+      "default": 0
+    },
+    "error_message": {
+      "type": "string",
+      "title": "Error Message"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Started At"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Completed At"
+    }
+  },
+  "required": [
+    "run_id",
+    "niche",
+    "city",
+    "max_results",
+    "status",
+    "started_at"
+  ]
+}
