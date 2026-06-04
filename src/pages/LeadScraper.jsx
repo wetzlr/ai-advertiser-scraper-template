@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, Globe, Phone, Mail, Star, MapPin, XCircle, Building2, Download } from 'lucide-react';
+import { Loader2, Search, Globe, Phone, Mail, Star, MapPin, XCircle, Building2, Download, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LeadScraper() {
@@ -85,14 +85,29 @@ export default function LeadScraper() {
     { to: '/', label: 'Lead Scraper', icon: <Search className="w-4 h-4" /> },
   ];
 
+  // Unique niches across the whole prospect set, used to render the
+  // filter chips. Empty string == "All" — clears the filter.
+  const niches = Array.from(new Set(prospects.map(p => p.niche).filter(Boolean))).sort();
   const filtered = filterNiche
-    ? prospects.filter(p => p.niche?.toLowerCase().includes(filterNiche.toLowerCase()))
+    ? prospects.filter(p => p.niche === filterNiche)
     : prospects;
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const displayed = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  // Flip the Qualified flag on a single Prospect and re-fetch the table.
+  // Optimistic UI not used here because the table only re-renders on
+  // query invalidation — keeping it simple.
+  async function toggleQualified(p) {
+    try {
+      await base44.entities.Prospect.update(p.id, { qualified: !p.qualified });
+      queryClient.invalidateQueries({ queryKey: ['prospects'] });
+    } catch (e) {
+      toast.error(`Couldn't update lead: ${e.message}`);
+    }
+  }
+
   const exportCSV = (rows, filename) => {
-    const headers = ['Name', 'Phone', 'Email', 'Website', 'Address', 'Rating', 'Reviews', 'Niche', 'City', 'Has Website'];
+    const headers = ['Name', 'Phone', 'Email', 'Website', 'Address', 'Rating', 'Reviews', 'Niche', 'City', 'Has Website', 'Qualified'];
     const lines = [headers.join(','), ...rows.map(p => [
       `"${(p.name || '').replace(/"/g, '""')}"`,
       `"${p.phone || ''}"`,
@@ -104,6 +119,7 @@ export default function LeadScraper() {
       `"${p.niche || ''}"`,
       `"${p.city || ''}"`,
       p.has_website ? 'Yes' : 'No',
+      p.qualified ? 'Yes' : 'No',
     ].join(','))];
     const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -229,21 +245,43 @@ export default function LeadScraper() {
 
         {/* Prospects Table */}
         <div className="rounded-2xl overflow-hidden" style={{ background: '#0d1526', border: '1px solid #1e2d4a' }}>
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #1e2d4a' }}>
-            <div className="flex items-center gap-3">
-              <h2 className="text-white font-semibold">Prospects</h2>
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(234,88,12,0.2)', color: '#fb923c', border: '1px solid rgba(234,88,12,0.3)' }}>
+          <div className="flex items-center justify-between px-5 py-4 gap-3" style={{ borderBottom: '1px solid #1e2d4a' }}>
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <h2 className="text-white font-semibold shrink-0">Prospects</h2>
+              <span className="px-2 py-0.5 rounded-full text-xs font-semibold shrink-0" style={{ background: 'rgba(234,88,12,0.2)', color: '#fb923c', border: '1px solid rgba(234,88,12,0.3)' }}>
                 {filtered.length.toLocaleString()}
               </span>
+              {/* Niche filter chips. Empty filterNiche == "All". Auto-built
+                  from the unique niches in the current Prospect set. */}
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                <button
+                  onClick={() => { setFilterNiche(''); setPage(1); }}
+                  className="px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors"
+                  style={
+                    filterNiche === ''
+                      ? { background: 'rgba(234,88,12,0.25)', color: '#fb923c', border: '1px solid rgba(234,88,12,0.5)' }
+                      : { background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid #1e2d4a' }
+                  }
+                >
+                  All
+                </button>
+                {niches.map(n => (
+                  <button
+                    key={n}
+                    onClick={() => { setFilterNiche(n); setPage(1); }}
+                    className="px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors"
+                    style={
+                      filterNiche === n
+                        ? { background: 'rgba(234,88,12,0.25)', color: '#fb923c', border: '1px solid rgba(234,88,12,0.5)' }
+                        : { background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid #1e2d4a' }
+                    }
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                className="rounded-lg px-3 py-1.5 text-sm outline-none"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #7c2d12', color: 'white', width: '160px' }}
-                placeholder="Filter by niche…"
-                value={filterNiche}
-                onChange={e => { setFilterNiche(e.target.value); setPage(1); }}
-              />
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => exportCSV(displayed, `leads-page${page}.csv`)}
                 disabled={displayed.length === 0}
@@ -269,6 +307,9 @@ export default function LeadScraper() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: 'rgba(255,255,255,0.03)', color: '#4a6fa5' }} className="text-xs uppercase tracking-wide">
+                  <th className="text-left px-5 py-3 w-10">
+                    <CheckCircle2 className="w-3.5 h-3.5 inline" />
+                  </th>
                   <th className="text-left px-5 py-3">Business</th>
                   <th className="text-left px-5 py-3">Contact</th>
                   <th className="text-left px-5 py-3">Address</th>
@@ -280,13 +321,29 @@ export default function LeadScraper() {
               <tbody>
                 {displayed.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center" style={{ color: '#4a6fa5' }}>
+                    <td colSpan={7} className="px-5 py-12 text-center" style={{ color: '#4a6fa5' }}>
                       No prospects yet. Run a scrape above.
                     </td>
                   </tr>
                 )}
                 {displayed.map((p, i) => (
-                  <tr key={p.id} style={{ borderTop: '1px solid #1a2640' }} className="hover:bg-white/5 transition-colors">
+                  <tr
+                    key={p.id}
+                    style={{
+                      borderTop: '1px solid #1a2640',
+                      background: p.qualified ? 'rgba(34, 197, 94, 0.06)' : undefined,
+                    }}
+                    className="hover:bg-white/5 transition-colors"
+                  >
+                    <td className="px-5 py-3 align-middle">
+                      <input
+                        type="checkbox"
+                        checked={!!p.qualified}
+                        onChange={() => toggleQualified(p)}
+                        title={p.qualified ? "Mark as not yet contacted" : "Mark as already contacted"}
+                        className="w-4 h-4 rounded cursor-pointer accent-orange-500"
+                      />
+                    </td>
                     <td className="px-5 py-3 font-medium text-white max-w-[180px] truncate">{p.name}</td>
                     <td className="px-5 py-3" style={{ color: '#94a3b8' }}>
                       <div className="flex flex-col gap-0.5">

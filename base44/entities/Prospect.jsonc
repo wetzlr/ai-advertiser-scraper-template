@@ -51,6 +51,12 @@
       "type": "string",
       "format": "date-time",
       "title": "Scraped At"
+    },
+    "qualified": {
+      "type": "boolean",
+      "title": "Qualified",
+      "default": false,
+      "description": "Mark true after you've reached out so you don't double-dial."
     }
   },
   "required": [
